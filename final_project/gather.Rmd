@@ -59,6 +59,10 @@ WVS_countries <- WVS_var %>%
 ```{r}
 # plotting question 28
 
+# q260 specifies the gender, it is either male of female (1/2) because I wanted
+# to use fill = q260 in the plot I had to change it to a character so it won't
+# be continues and I could use dodge later.
+
 WVS$q260 <- as.character(WVS$q260)
 
 plot_q28 <- WVS %>% 
@@ -82,12 +86,60 @@ plot_q28 <- WVS %>%
                        y = fct_reorder(country_territory, avg_q28),
                        fill = q260)) +
   geom_col(position = "dodge") +
-  labs(title = "Agree or Disagree: When a mother works for payment, her children suffer",
-       subtitle = "Average value raging from 1- strongly disagree, to 4- strongly agree",
+  labs(title = "Agree or Disagree:
+       When a mother works for payment, her children suffer",
+       subtitle = "Opinions are similar between men and women, but highly varied between countries",
        fill = "Gender",
-       x = "Agreement",
+       x = "Average value raging from 1- strongly disagree, to 4- strongly agree",
        y = NULL) +
   scale_fill_discrete(name = "Gender", labels = c("Male", "Female"))
 
-plot_q28  
 ```
+
+```{r}
+ggsave("plot_q28.png", plot_q28)
+```
+
+```{r}
+# plotting question 29: Q32- Being a housewife is just as fulfilling as working
+# for pay
+
+plot_q29 <- WVS %>% 
+  
+  # joining WVS data with the countries names instead of number
+  
+  inner_join(WVS_countries, by = "b_country") %>%
+  
+  # for q260- 1 = Male, 2 = Female
+  # q28- how much do you agree: When a mother works for pay, the children suffer
+  
+  select(b_country, country_territory, q261, q260, q29p) %>%
+  
+  # before I added drop_an, when I did the summarize I got many NA values.
+  
+  drop_na() %>% 
+  group_by(b_country,country_territory, q260) %>% 
+  
+  # calculating the average score q28 got- ranges from 1 (strongly disagree) to
+  # 4 (strongly agree), according to gender and country.
+  
+  summarise(avg_q29 = sum(q29p)/n(), .groups = "drop") %>% 
+  ggplot(mapping = aes(x = avg_q29,
+                       y = fct_reorder(country_territory, avg_q29),
+                       fill = q260)) +
+  geom_col(position = "dodge") +
+  labs(title = "Agree or Disagree:
+       Being a housewife is just as fulfilling as working for pay",
+       subtitle = "Ironically men tend to agree with this statement more than women do",
+       fill = "Gender",
+       x = "Average value raging from 1- strongly disagree, to 4- strongly agree",
+       y = NULL) + 
+  scale_fill_discrete(name = "Gender", labels = c("Male", "Female"))
+
+
+```
+
+```{r}
+ggsave("plot_q29.png", plot_q29)
+```
+

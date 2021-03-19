@@ -39,18 +39,26 @@ ui <- navbarPage(
              h3("About Me"),
              p("My name is Shaked and I study Neuroscience. 
              You can reach me at shakedleibovitz@college.harvard.edu."),
-             p(tags$a(href = "https://github.com/Shakedi/gov1005-milestone-3", "connect to Github-milestone-3"))))
+             p(tags$a(href = "https://github.com/Shakedi/gov1005-milestone-3", "connect to Github-milestone-3"))),
+    mainPanel(imageOutput("map")))
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white')
+    output$map <- renderImage({
+        if(input$plot_type == "a"){            
+            list(
+                src = "plot_q28.png",
+                width = 710,
+                height = 800,
+                alt = "Should Women Work?")
+        }                                        
+        else if(input$plot_type == "b"){
+            list(
+                src = "plot_q29.png",
+                width = 710,
+                height = 800,
+                alt = "Being a Housewife Fullfiling?")
+        }
     })
 }
 
