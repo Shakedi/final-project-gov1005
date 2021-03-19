@@ -14,13 +14,13 @@ ui <- navbarPage(
     "Happiness and The Status of Women",
     tabPanel("Model",
              fluidPage(
-                 titlePanel("Model Title"),
+                 titlePanel("World Value Survey Questions"),
                  sidebarLayout(
                      sidebarPanel(
                          selectInput(
                              "plot_type",
                              "Plot Type",
-                             c("Option A" = "a", "Option B" = "b")
+                             c("Should Women Work?" = "a", "Is Being a Housewife Fullfiling?" = "b")
                          )),
                      mainPanel(plotOutput("line_plot")))
              )),
@@ -48,16 +48,16 @@ server <- function(input, output) {
         if(input$plot_type == "a"){            
             list(
                 src = "plot_q28.png",
-                width = 710,
+                width = 750,
                 height = 800,
                 alt = "Should Women Work?")
         }                                        
         else if(input$plot_type == "b"){
             list(
                 src = "plot_q29.png",
-                width = 710,
+                width = 750,
                 height = 800,
-                alt = "Being a Housewife Fullfiling?")
+                alt = "Is Being a Housewife Fullfiling?")
         }
     })
 }

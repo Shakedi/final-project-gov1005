@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(janitor)
 library(readxl)
+library(rworldmap)
 ```
 
 
@@ -28,6 +29,7 @@ library(readxl)
   `Perceptions of corruption` = col_double())) %>% 
   clean_names()
 
+happiness_2019
 ```
 
 ```{r WVS, cache=TRUE}
@@ -94,6 +96,7 @@ plot_q28 <- WVS %>%
        y = NULL) +
   scale_fill_discrete(name = "Gender", labels = c("Male", "Female"))
 
+plot_q28
 ```
 
 ```{r}
@@ -141,5 +144,20 @@ plot_q29 <- WVS %>%
 
 ```{r}
 ggsave("plot_q29.png", plot_q29)
+```
+
+```{r}
+freedom <- happiness_2019 %>% 
+  select(country_or_region, freedom_to_make_life_choices)
+
+# https://rpubs.com/emmavalme/rworldmap_vignette
+#https://slcladal.github.io/maps.html#1_Getting_started_with_maps
+
+joinData <- joinCountryData2Map(freedom,
+                                joinCode = "NAME",
+                                nameJoinColumn = "country_or_region")
+
+theMap <- mapCountryData( joinData, nameColumnToPlot="freedom_to_make_life_choices", addLegend=FALSE )
+do.call(addMapLegend, c(theMap, legendWidth=1, legendMar = 2))
 ```
 
