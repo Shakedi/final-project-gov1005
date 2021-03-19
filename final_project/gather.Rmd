@@ -1,0 +1,93 @@
+---
+title: "gather"
+author: "Shaked Leibovitz"
+date: "3/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(janitor)
+library(readxl)
+```
+
+
+```{r world_happiness_report_2019}
+
+  happiness_2019 <- read_csv(file = "raw_data/2019 copy.csv",
+                           col_types = cols(
+  `Overall rank` = col_double(),
+  `Country or region` = col_character(),
+  Score = col_double(),
+  `GDP per capita` = col_double(),
+  `Social support` = col_double(),
+  `Healthy life expectancy` = col_double(),
+  `Freedom to make life choices` = col_double(),
+  Generosity = col_double(),
+  `Perceptions of corruption` = col_double())) %>% 
+  clean_names()
+
+```
+
+```{r WVS, cache=TRUE}
+# should I add the raw data file to gitignore? website for reference:
+# https://www.worldvaluessurvey.org/WVSDocumentationWV7.jsp I am using the
+# reverse scale- so pay attention that for questions like - how strongly to you
+# agree with a statement, 1 is disagree and 4 is agree. (the letter p- stands
+# for positive, was added to variable names). An idea for a question- Are women
+# more happy in an environment that is more liberal? interesting questions are-
+# Q28- Q33 about the Status of Women. Q46 to Q56 are about happiness question
+# about religious beliefs Q164 to Q175 Q260 is the respondent's sex (according
+# to the interviewer's observation) Q261 is year of birth Q275- highest
+# education level of respondent
+
+WVS <- read_rds(file = "raw_data/World_Values_Survey_Wave_7_Inverted_R_v1_6 2") %>% 
+  clean_names()
+
+# variable code for the WVS
+
+WVS_var <- read_xlsx(path = "raw_data/WVS-7_Variables_Report_Annex copy.xlsx") %>% 
+  clean_names() %>% 
+  rename("b_country" = "iso_3166_1_numeric_code")
+
+WVS_countries <- WVS_var %>%
+  select(country_territory, b_country)
+  
+```
+
+```{r}
+# plotting question 28
+
+WVS$q260 <- as.character(WVS$q260)
+
+plot_q28 <- WVS %>% 
+  inner_join(WVS_countries, by = "b_country") %>%
+  
+  # for q260- 1 = Male, 2 = Female
+  # q28- how much do you agree: When a mother works for pay, the children suffer
+  
+  select(b_country, country_territory, q261, q260, q28p) %>%
+  
+  # before I added drop_an, when I did the summarize I got many NA values.
+  
+  drop_na() %>%
+  group_by(b_country,country_territory, q260) %>% 
+  
+  # calculating the average score q28 got- ranges from 1 (strongly disagree) to
+  # 4 (strongly agree), according to gender and country.
+  
+  summarise(avg_q28 = sum(q28p)/n(), .groups = "drop") %>% 
+  ggplot(mapping = aes(x = avg_q28,
+                       y = fct_reorder(country_territory, avg_q28),
+                       fill = q260)) +
+  geom_col(position = "dodge") +
+  labs(title = "Agree or Disagree: When a mother works for payment, her children suffer",
+       subtitle = "Average value raging from 1- strongly disagree, to 4- strongly agree",
+       fill = "Gender",
+       x = "Agreement",
+       y = NULL) +
+  scale_fill_discrete(name = "Gender", labels = c("Male", "Female"))
+
+plot_q28  
+```

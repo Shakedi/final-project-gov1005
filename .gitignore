@@ -1,0 +1,12 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+*Rproj
+
+.DS_Store
+
+final_project/raw_data
+
+final_project/gather_cache
