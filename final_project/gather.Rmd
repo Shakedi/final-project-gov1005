@@ -11,6 +11,7 @@ library(tidyverse)
 library(janitor)
 library(readxl)
 library(rworldmap)
+library(leaflet)
 ```
 
 
@@ -131,22 +132,21 @@ plot_q29 <- WVS %>%
                        y = fct_reorder(country_territory, avg_q29),
                        fill = q260)) +
   geom_col(position = "dodge") +
-  labs(title = "Agree or Disagree:
-       Being a housewife is just as fulfilling as working for pay",
+  labs(title = "Agree or Disagree:\nBeing a housewife is just as fulfilling as working for pay",
        subtitle = "Ironically men tend to agree with this statement more than women do",
        fill = "Gender",
        x = "Average value raging from 1- strongly disagree, to 4- strongly agree",
        y = NULL) + 
   scale_fill_discrete(name = "Gender", labels = c("Male", "Female"))
 
-
+plot_q29
 ```
 
 ```{r}
 ggsave("plot_q29.png", plot_q29)
 ```
 
-```{r}
+```{r freedom_hapiness_2019}
 freedom <- happiness_2019 %>% 
   select(country_or_region, freedom_to_make_life_choices)
 
@@ -157,7 +157,80 @@ joinData <- joinCountryData2Map(freedom,
                                 joinCode = "NAME",
                                 nameJoinColumn = "country_or_region")
 
-theMap <- mapCountryData( joinData, nameColumnToPlot="freedom_to_make_life_choices", addLegend=FALSE )
-do.call(addMapLegend, c(theMap, legendWidth=1, legendMar = 2))
+theMap <- mapCountryData(joinData, nameColumnToPlot="freedom_to_make_life_choices", addLegend = FALSE, mapTitle = "Freedom To Make Life Choices", colourPalette = "heat")
+
+#do.call(addMapLegend, c(theMap, legendWidth = 1, legendMar = 2))
+
+max(freedom$freedom_to_make_life_choices)
+
+```
+
+```{r freedom_hapiness_2019_interactive}
+#  Freedom to make life choices is the national average of binary responses to
+#  the GWP question “Are you satisfied or dissatisfied with your freedom to
+#  choose what you do with your life?”
+
+qpal <- colorNumeric("magma",
+                      joinData$freedom_to_make_life_choices, na.color = NA)
+
+# the maximum freedom value is 0.631
+
+freedom_interactive <- leaflet(joinData, 
+             options = leafletOptions(attributionControl = FALSE, minzoom=1.5)) %>%
+  addPolygons(label= ~stringr::str_c(country_or_region, ' ', as.double(freedom_to_make_life_choices*10)),
+    labelOptions= labelOptions(direction = 'auto'),
+    weight=1, color='#333333', opacity=1,
+    fillColor = ~qpal(freedom_to_make_life_choices), fillOpacity = 1,
+    highlightOptions = highlightOptions(
+      color='#000000', weight = 2,
+      bringToFront = TRUE, sendToBack = TRUE)
+    ) %>%
+  addLegend(values = ~freedom_to_make_life_choices,
+    opacity = 1, pal = qpal, title = htmltools::HTML("Freedom to Make Life Choices <br> 2019 World Happiness Report <h5>(from 1- lowest to 10- highest)</h5>"))  
+
+# display visualization
+
+freedom_interactive
+```
+
+```{r happiness}
+happiness_score <- happiness_2019 %>% 
+  select(country_or_region, score)
+
+happiness_score
+
+# https://rpubs.com/emmavalme/rworldmap_vignette
+#https://slcladal.github.io/maps.html#1_Getting_started_with_maps
+
+joinDataHapinnes <- joinCountryData2Map(happiness_score,
+                                joinCode = "NAME",
+                                nameJoinColumn = "country_or_region")
+
+theMapHapiness <- mapCountryData(joinData, nameColumnToPlot="score", addLegend = FALSE, mapTitle = "Happiness", colourPalette = "heat")
+
+#do.call(addMapLegend, c(theMap, legendWidth = 1, legendMar = 2))
+
+max(happiness_score$score)
+```
+
+```{r happiness_interactive}
+qpal <- colorNumeric(rev(viridis::viridis(10)),
+                      joinDataHapinnes$score, na.color = "gray")
+
+
+hapiness_interactive <- leaflet(joinDataHapinnes, 
+             options = leafletOptions(attributionControl = FALSE, minzoom=1.5)) %>%
+  addPolygons(label= ~stringr::str_c(country_or_region, ' ', as.double(score)),
+    labelOptions= labelOptions(direction = 'auto'),
+    weight=1, color='#333333', opacity=1,
+    fillColor = ~qpal(score), fillOpacity = 1,
+    highlightOptions = highlightOptions(
+      color='#000000', weight = 2,
+      bringToFront = TRUE, sendToBack = TRUE)
+    ) %>%
+  addLegend(values = ~score,
+    opacity = 1, pal = qpal, title = htmltools::HTML("Happiness score from 1 lowest to 10 highest <br> 2019 World Happiness Report"))  
+
+hapiness_interactive
 ```
 
