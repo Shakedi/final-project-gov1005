@@ -1,22 +1,14 @@
----
-title: "gather"
-author: "Shaked Leibovitz"
-date: "3/19/2021"
-output: html_document
----
-
-```{r setup, include=FALSE}
+## ----setup, include=FALSE---------------------------------------------------------------------
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(janitor)
 library(readxl)
 library(rworldmap)
 library(leaflet)
-library(rstanarm)
-```
+#library(rstanarm)
 
 
-```{r world_happiness_report_2019}
+## ----world_happiness_report_2019--------------------------------------------------------------
 
   happiness_2019 <- read_csv(file = "raw_data/2019 copy.csv",
                            col_types = cols(
@@ -32,9 +24,9 @@ library(rstanarm)
   clean_names()
 
 happiness_2019
-```
 
-```{r WVS, cache=TRUE}
+
+## ----WVS, cache=TRUE--------------------------------------------------------------------------
 # should I add the raw data file to gitignore? website for reference:
 # https://www.worldvaluessurvey.org/WVSDocumentationWV7.jsp I am using the
 # reverse scale- so pay attention that for questions like - how strongly to you
@@ -58,9 +50,9 @@ WVS_var <- read_xlsx(path = "raw_data/WVS-7_Variables_Report_Annex copy.xlsx") %
 WVS_countries <- WVS_var %>%
   select(country_territory, b_country)
   
-```
 
-```{r}
+
+## ---------------------------------------------------------------------------------------------
 # plotting question 28
 
 # q260 specifies the gender, it is either male of female (1/2) because I wanted
@@ -99,13 +91,13 @@ plot_q28 <- WVS %>%
   scale_fill_discrete(name = "Gender", labels = c("Male", "Female"))
 
 plot_q28
-```
 
-```{r}
+
+## ---------------------------------------------------------------------------------------------
 ggsave("plot_q28.png", plot_q28)
-```
 
-```{r}
+
+## ---------------------------------------------------------------------------------------------
 # plotting question 29: Q32- Being a housewife is just as fulfilling as working
 # for pay
 
@@ -141,9 +133,9 @@ plot_q29 <- WVS %>%
   scale_fill_discrete(name = "Gender", labels = c("Male", "Female"))
 
 plot_q29
-```
 
-```{r}
+
+## ---------------------------------------------------------------------------------------------
 # plotting question 29: Q32- Being a housewife is just as fulfilling as working
 # for pay. trying to do a posterior to check the causality between being a male
 # and agreeing
@@ -167,30 +159,30 @@ plot_q29_new
 
 # answering the question of how gender affects agreement with q29
 
-fit_29 <- stan_glm(formula = q29p ~ gender,
-         data = plot_q29_new,
-         refresh = 0)
+# fit_29 <- stan_glm(formula = q29p ~ gender,
+#          data = plot_q29_new,
+#          refresh = 0)
+# 
+# newobs <- tibble(gender = c(1,0))
+# 
+# posterior_epred(fit_29, newdata = newobs) %>% 
+#   as_tibble() %>% 
+#   mutate_all(as.numeric) %>% 
+#   rowwise() %>% 
+#   mutate(diff_male_minus_female = `1` - `2`) %>% 
+#   ggplot(aes(x = diff_male_minus_female)) +
+#     geom_histogram(aes(y = after_stat(count/sum(count))),
+#                    bins = 100) +
+#   scale_y_continuous(labels = scales::percent_format()) +
+#     theme_classic()
 
-newobs <- tibble(gender = c(1,0))
 
-posterior_epred(fit_29, newdata = newobs) %>% 
-  as_tibble() %>% 
-  mutate_all(as.numeric) %>% 
-  rowwise() %>% 
-  mutate(diff_male_minus_female = `1` - `2`) %>% 
-  ggplot(aes(x = diff_male_minus_female)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
-                   bins = 100) +
-  scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
 
-```
-
-```{r}
+## ---------------------------------------------------------------------------------------------
 ggsave("plot_q29.png", plot_q29)
-```
 
-```{r freedom_hapiness_2019}
+
+## ----freedom_hapiness_2019--------------------------------------------------------------------
 freedom <- happiness_2019 %>% 
   select(country_or_region, freedom_to_make_life_choices)
 
@@ -207,9 +199,9 @@ theMap <- mapCountryData(joinData, nameColumnToPlot="freedom_to_make_life_choice
 
 max(freedom$freedom_to_make_life_choices)
 
-```
 
-```{r freedom_hapiness_2019_interactive}
+
+## ----freedom_hapiness_2019_interactive--------------------------------------------------------
 #  Freedom to make life choices is the national average of binary responses to
 #  the GWP question “Are you satisfied or dissatisfied with your freedom to
 #  choose what you do with your life?”
@@ -239,9 +231,9 @@ freedom_interactive <- leaflet(joinData,
 # display visualization
 
 freedom_interactive
-```
 
-```{r happiness}
+
+## ----happiness--------------------------------------------------------------------------------
 happiness_score <- happiness_2019 %>% 
   select(country_or_region, score)
 
@@ -259,9 +251,9 @@ joinDataHapinnes <- joinCountryData2Map(happiness_score,
 #do.call(addMapLegend, c(theMap, legendWidth = 1, legendMar = 2))
 
 max(happiness_score$score)
-```
 
-```{r happiness_interactive}
+
+## ----happiness_interactive--------------------------------------------------------------------
 # at first I used colorQuantile but it doesn't make sense for the data
 
 qpal <- colorNumeric(rev(viridis::viridis(10)),
@@ -282,5 +274,4 @@ hapiness_interactive <- leaflet(joinDataHapinnes,
     opacity = 1, pal = qpal, title = htmltools::HTML("Happiness score from 1 lowest to 10 highest <br> 2019 World Happiness Report"))  
 
 hapiness_interactive
-```
 

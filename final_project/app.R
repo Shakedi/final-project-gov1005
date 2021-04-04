@@ -8,10 +8,18 @@
 #
 
 library(shiny)
+library(leaflet)
+library(leaflet.extras)
+library(rworldmap)
+
+
+source("gather.R")
 
 # Define UI for application that draws a histogram
 ui <- navbarPage(
     "Happiness and The Status of Women",
+    tabPanel("Freedom",
+             leafletOutput(outputId = "freedom_interactive")),
     tabPanel("Model",
              fluidPage(
                  titlePanel("World Value Survey Questions"),
@@ -22,7 +30,7 @@ ui <- navbarPage(
                              "Plot Type",
                              c("Should Women Work?" = "a", "Is Being a Housewife Fullfiling?" = "b")
                          )),
-                     mainPanel(plotOutput("line_plot")))
+                     imageOutput("map"))
              )),
     tabPanel("Discussion",
              titlePanel("Discussion"),
@@ -39,27 +47,31 @@ ui <- navbarPage(
              h3("About Me"),
              p("My name is Shaked and I study Neuroscience. 
              You can reach me at shakedleibovitz@college.harvard.edu."),
-             p(tags$a(href = "https://github.com/Shakedi/gov1005-milestone-3", "connect to Github-milestone-3"))),
-    mainPanel(imageOutput("map")))
+             p(tags$a(href = "https://github.com/Shakedi/gov1005-milestone-3", "connect to Github-milestone-3"))))
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+    output$freedom_interactive <- renderLeaflet({
+        freedom_interactive
+        })
     output$map <- renderImage({
         if(input$plot_type == "a"){            
             list(
                 src = "plot_q28.png",
                 width = 750,
                 height = 800,
-                alt = "Should Women Work?")
+                alt = "Should Women Work?",
+                deleteFile = TRUE)
         }                                        
         else if(input$plot_type == "b"){
             list(
                 src = "plot_q29.png",
-                width = 750,
-                height = 800,
+                width = 500,
+                height = 700,
                 alt = "Is Being a Housewife Fullfiling?")
         }
     })
+   
 }
 
 # Run the application 
