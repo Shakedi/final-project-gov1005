@@ -192,7 +192,8 @@ ggsave("plot_q29.png", plot_q29)
 
 ```{r freedom_hapiness_2019}
 freedom <- happiness_2019 %>% 
-  select(country_or_region, freedom_to_make_life_choices)
+  select(country_or_region, freedom_to_make_life_choices) %>% 
+  mutate(freedom_to_make_life_choices_10 = freedom_to_make_life_choices*10)
 
 # https://rpubs.com/emmavalme/rworldmap_vignette
 #https://slcladal.github.io/maps.html#1_Getting_started_with_maps
@@ -214,26 +215,43 @@ max(freedom$freedom_to_make_life_choices)
 #  the GWP question “Are you satisfied or dissatisfied with your freedom to
 #  choose what you do with your life?”
 
-qpal <- colorNumeric("magma",
-                      joinData$freedom_to_make_life_choices, na.color = NA)
+# the freedom data from 2019: 
 
-# the maximum freedom value is 0.631
+freedom <- happiness_2019 %>% 
+  select(country_or_region, freedom_to_make_life_choices) %>% 
+  mutate(freedom_to_make_life_choices_10 = freedom_to_make_life_choices*10)
+
+# joining freedom data with map data:
+
+joinData <- joinCountryData2Map(freedom,
+                                joinCode = "NAME",
+                                nameJoinColumn = "country_or_region")
+
+# defining color for the map:
+
+qpal <- colorNumeric("magma",
+                      joinData$freedom_to_make_life_choices_10, na.color = NA)
+
+
+# the leaflet map:
 
 freedom_interactive <- leaflet(joinData, 
              options = leafletOptions(attributionControl = FALSE, minzoom=1.5)) %>%
   
   # I multiplied the score by 10 to create a scale of 1-10 because the original
   # value is from 0-1 to a boolean question which was averaged
+  # defining the values read when hovering on a country:
   
-  addPolygons(label= ~stringr::str_c(country_or_region, ' ',  as.double(freedom_to_make_life_choices*10)),
+  addPolygons(label= ~stringr::str_c(country_or_region, ' ', 
+                                     as.double(freedom_to_make_life_choices_10)),
     labelOptions= labelOptions(direction = 'auto'),
     weight=1, color='#333333', opacity=1,
-    fillColor = ~qpal(freedom_to_make_life_choices), fillOpacity = 1,
+    fillColor = ~qpal(freedom_to_make_life_choices_10), fillOpacity = 1,
     highlightOptions = highlightOptions(
       color='#000000', weight = 2,
       bringToFront = TRUE, sendToBack = TRUE)
     ) %>%
-  addLegend(values = ~freedom_to_make_life_choices,
+  addLegend(values = ~freedom_to_make_life_choices_10,
     opacity = 1, pal = qpal, title = htmltools::HTML("Freedom to Make Life Choices <br> 2019 World Happiness Report <h5>(from 1- lowest to 10- highest)</h5>"))  
 
 # display visualization
@@ -268,7 +286,7 @@ qpal <- colorNumeric(rev(viridis::viridis(10)),
                       joinDataHapinnes$score, na.color = "gray")
 
 
-hapiness_interactive <- leaflet(joinDataHapinnes, 
+happiness_interactive <- leaflet(joinDataHapinnes, 
              options = leafletOptions(attributionControl = FALSE, minzoom=1.5)) %>%
   addPolygons(label= ~stringr::str_c(country_or_region, ' ', as.double(score)),
     labelOptions= labelOptions(direction = 'auto'),
@@ -281,6 +299,6 @@ hapiness_interactive <- leaflet(joinDataHapinnes,
   addLegend(values = ~score,
     opacity = 1, pal = qpal, title = htmltools::HTML("Happiness score from 1 lowest to 10 highest <br> 2019 World Happiness Report"))  
 
-hapiness_interactive
+happiness_interactive
 ```
 

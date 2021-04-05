@@ -11,27 +11,27 @@ library(shiny)
 library(leaflet)
 library(leaflet.extras)
 library(rworldmap)
+source("gather.R", local = TRUE)
 
+# Define UI 
 
-source("gather.R")
-
-# Define UI for application that draws a histogram
 ui <- navbarPage(
-    "Happiness and The Status of Women",
+    "Happiness, Freedom, and The Status of Women",
     tabPanel("Freedom",
-             leafletOutput(outputId = "freedom_interactive")),
+             fluidPage(
+                 titlePanel("Freedom to Make Life Choices"),
+                     leafletOutput(outputId = "freedom_interactive"),
+                 titlePanel("Happiness"),
+                     leafletOutput(outputId = "happiness_interactive"))),
     tabPanel("Model",
              fluidPage(
                  titlePanel("World Value Survey Questions"),
                  sidebarLayout(
                      sidebarPanel(
-                         selectInput(
-                             "plot_type",
-                             "Plot Type",
-                             c("Should Women Work?" = "a", "Is Being a Housewife Fullfiling?" = "b")
-                         )),
-                     imageOutput("map"))
-             )),
+                         selectInput("plot_type","Question",
+                                     c("Should Women Work?" = "a",
+                                       "Is Being a Housewife Fullfiling?" = "b"))),
+                         imageOutput("map")))),
     tabPanel("Discussion",
              titlePanel("Discussion"),
              p("Tour of the modeling choices you made and 
@@ -53,20 +53,23 @@ ui <- navbarPage(
 server <- function(input, output) {
     output$freedom_interactive <- renderLeaflet({
         freedom_interactive
-        })
+    })
+    output$happiness_interactive <- renderLeaflet({
+        happiness_interactive
+    })
     output$map <- renderImage({
         if(input$plot_type == "a"){            
             list(
                 src = "plot_q28.png",
-                width = 750,
-                height = 800,
+                width = 550,
+                height = 700,
                 alt = "Should Women Work?",
                 deleteFile = TRUE)
         }                                        
         else if(input$plot_type == "b"){
             list(
                 src = "plot_q29.png",
-                width = 500,
+                width = 550,
                 height = 700,
                 alt = "Is Being a Housewife Fullfiling?")
         }
