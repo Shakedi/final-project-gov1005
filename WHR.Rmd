@@ -1,0 +1,81 @@
+---
+title: "WHR"
+author: "Shaked Leibovitz"
+date: "4/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(readxl)
+library(rworldmap)
+library(leaflet)
+library(rstanarm)
+library(ggthemes)
+```
+
+```{r}
+# I am interested in life Ladder variable which is the happiness score.
+
+whr <- read_xls("final_project/raw_data/DataPanelWHR2021C2.xls") %>% 
+  clean_names()
+
+whr_health <- read_xlsx("final_project/raw_data/MortalityDataWHR2021C2.xlsx")
+```
+
+```{r}
+# the 20 countries who recieved the highest score in 2020
+
+happiest_15 <- whr %>% 
+  
+  # score is the average value a to the question- how would you rate your
+  # happiness from 1 to 10
+  
+  rename(score = life_ladder) %>% 
+  arrange(desc(year)) %>% 
+  filter(year == 2020) %>% 
+  arrange(desc(score)) %>% 
+  slice(1:5) %>% 
+  pull(country_name)
+
+happiest_15
+```
+
+```{r}
+# the 20 countries who received the lowest score
+
+saddest_15 <- whr %>% 
+  
+  # score is the average value a to the question- how would you rate your
+  # happiness from 1 to 10
+  
+  rename(score = life_ladder) %>% 
+  arrange(desc(year)) %>% 
+  filter(year == 2020) %>% 
+  arrange(score) %>% 
+  slice(1:5) %>% 
+  pull(country_name)
+
+saddest_15
+```
+
+```{r}
+thirty <- c(saddest_15, happiest_15)
+
+thirty
+
+whr %>%
+  rename(score = life_ladder) %>% 
+  filter(country_name %in% thirty) %>%  
+  ggplot(aes(x = year, y = score, color = country_name)) +
+  geom_point() +
+  geom_line() 
+  
+
+```
+

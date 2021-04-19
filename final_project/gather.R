@@ -59,39 +59,37 @@ WVS_countries <- WVS_var %>%
 # to use fill = q260 in the plot I had to change it to a character so it won't
 # be continues and I could use dodge later.
 
-WVS$q260 <- as.character(WVS$q260)
-
 plot_q28 <- WVS %>% 
   inner_join(WVS_countries, by = "b_country") %>%
   
-  # for q260- 1 = Male, 2 = Female
   # q28- how much do you agree: When a mother works for pay, the children suffer
   
   select(b_country, country_territory, q261, q260, q28p) %>%
   
   # before I added drop_an, when I did the summarize I got many NA values.
+  # for q260- 1 = Male, 2 = Female
   
   drop_na() %>%
+  mutate(Gender = ifelse(q260 == "1", "Male", "Female")) %>% 
   group_by(b_country,country_territory, q260) %>% 
+  
   
   # calculating the average score q28 got- ranges from 1 (strongly disagree) to
   # 4 (strongly agree), according to gender and country.
   
-  summarise(avg_q28 = sum(q28p)/n(), .groups = "drop") %>% 
+  summarise(avg_q28 = sum(q28p)/n(), .groups = "drop", Gender, country_territory) %>%  
   ggplot(mapping = aes(x = avg_q28,
                        y = fct_reorder(country_territory, avg_q28),
-                       fill = q260)) +
+                       fill = Gender)) +
   geom_col(position = "dodge") +
-  labs(title = "Agree or Disagree:
-       When a mother works for payment, her children suffer",
+  labs(title = "Agree or Disagree:\nWhen a mother works for payment, her children suffer",
        subtitle = "Opinions are similar between men and women, but highly varied between countries",
        fill = "Gender",
        x = "Average value raging from 1- strongly disagree, to 4- strongly agree",
        y = NULL) +
-  scale_fill_discrete(name = "Gender", labels = c("Male", "Female"))
+  scale_fill_manual(values = c("#FF9999", "#56B4E9")) 
 
 plot_q28
-
 
 ## ---------------------------------------------------------------------------------------------
 ggsave("plot_q28.png", plot_q28)
@@ -115,68 +113,29 @@ plot_q29 <- WVS %>%
   # before I added drop_an, when I did the summarize I got many NA values.
   
   drop_na() %>% 
-  group_by(b_country,country_territory, q260) %>% 
+  
+  # for q260- 1 = Male, 2 = Female
+  # mutating a new row for Gender might have change the results???
+  
+  mutate(Gender = ifelse(q260 == 1, "Male", "Female")) %>% 
+  group_by(b_country,country_territory, q260, Gender) %>% 
   
   # calculating the average score q28 got- ranges from 1 (strongly disagree) to
   # 4 (strongly agree), according to gender and country.
   
-  summarise(avg_q29 = sum(q29p)/n(), .groups = "drop") %>% 
+  summarise(avg_q29 = sum(q29p)/n(), .groups = "drop", Gender, country_territory, q260) %>%    
   ggplot(mapping = aes(x = avg_q29,
                        y = fct_reorder(country_territory, avg_q29),
-                       fill = q260)) +
+                       fill = Gender)) +
   geom_col(position = "dodge") +
   labs(title = "Agree or Disagree:\nBeing a housewife is just as fulfilling as working for pay",
        subtitle = "Ironically men tend to agree with this statement more than women do",
        fill = "Gender",
        x = "Average value raging from 1- strongly disagree, to 4- strongly agree",
        y = NULL) + 
-  scale_fill_discrete(name = "Gender", labels = c("Male", "Female"))
+  scale_fill_manual(values = c("#FF9999", "#56B4E9")) 
 
 plot_q29
-
-
-## ---------------------------------------------------------------------------------------------
-# plotting question 29: Q32- Being a housewife is just as fulfilling as working
-# for pay. trying to do a posterior to check the causality between being a male
-# and agreeing
-
-plot_q29_new <- WVS %>% 
-  
-  # joining WVS data with the countries names instead of number
-  
-  inner_join(WVS_countries, by = "b_country") %>%
-  
-  # for q260- 1 = Male, 2 = Female
-
-  select(b_country, country_territory, q260, q29p) %>%
-  
-  # male is 1 female is zero
-  
-  mutate(gender = ifelse(q260 == "1", 1, 0))
-  
-  
-plot_q29_new
-
-# answering the question of how gender affects agreement with q29
-
-# fit_29 <- stan_glm(formula = q29p ~ gender,
-#          data = plot_q29_new,
-#          refresh = 0)
-# 
-# newobs <- tibble(gender = c(1,0))
-# 
-# posterior_epred(fit_29, newdata = newobs) %>% 
-#   as_tibble() %>% 
-#   mutate_all(as.numeric) %>% 
-#   rowwise() %>% 
-#   mutate(diff_male_minus_female = `1` - `2`) %>% 
-#   ggplot(aes(x = diff_male_minus_female)) +
-#     geom_histogram(aes(y = after_stat(count/sum(count))),
-#                    bins = 100) +
-#   scale_y_continuous(labels = scales::percent_format()) +
-#     theme_classic()
-
-
 
 ## ---------------------------------------------------------------------------------------------
 ggsave("plot_q29.png", plot_q29)
@@ -222,7 +181,7 @@ joinData <- joinCountryData2Map(freedom,
 # defining color for the map:
 
 qpal <- colorNumeric("magma",
-                     joinData$freedom_to_make_life_choices_10, na.color = NA)
+                     joinData$freedom_to_make_life_choices_10, na.color = NA, domain = (0:10))
 
 
 # the leaflet map:
@@ -269,11 +228,13 @@ joinDataHapinnes <- joinCountryData2Map(happiness_score,
 max(happiness_score$score)
 
 
-## ----happiness_interactive--------------------------------------------------------------------
-# at first I used colorQuantile but it doesn't make sense for the data
+#----happiness_interactive--------------------------------------------------------------------
+#at first I used colorQuantile but it doesn't make sense for the data it is
+#important to include the domain do the coloring will be correlated with the
+#values in both plots.
 
-qpal <- colorNumeric(rev(viridis::viridis(10)),
-                      joinDataHapinnes$score, na.color = "gray")
+qpal <- colorNumeric("magma",
+                      joinDataHapinnes$score, na.color = NA, domain = c(0:10))
 
 
 happiness_interactive <- leaflet(joinDataHapinnes, 
@@ -287,7 +248,9 @@ happiness_interactive <- leaflet(joinDataHapinnes,
       bringToFront = TRUE, sendToBack = TRUE)
     ) %>%
   addLegend(values = ~score,
-    opacity = 1, pal = qpal, title = htmltools::HTML("Happiness score from 1 lowest to 10 highest <br> 2019 World Happiness Report"))  
+    opacity = 1, pal = qpal, title = htmltools::HTML("Happiness Score<br>2019 World Happiness Report<h5>(from 1- lowest to 10- highest)</h5>"))  
 
 happiness_interactive
+
+
 

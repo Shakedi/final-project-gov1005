@@ -13,6 +13,7 @@ library(readxl)
 library(rworldmap)
 library(leaflet)
 library(rstanarm)
+library(ggthemes)
 ```
 
 
@@ -55,48 +56,50 @@ WVS_var <- read_xlsx(path = "raw_data/WVS-7_Variables_Report_Annex copy.xlsx") %
   clean_names() %>% 
   rename("b_country" = "iso_3166_1_numeric_code")
 
+# matching counrty number to country name
+
 WVS_countries <- WVS_var %>%
   select(country_territory, b_country)
-  
 ```
 
-```{r}
+```{r question_28}
 # plotting question 28
 
 # q260 specifies the gender, it is either male of female (1/2) because I wanted
 # to use fill = q260 in the plot I had to change it to a character so it won't
 # be continues and I could use dodge later.
 
-WVS$q260 <- as.character(WVS$q260)
+#WVS$q260 <- as.character(WVS$q260)
 
 plot_q28 <- WVS %>% 
   inner_join(WVS_countries, by = "b_country") %>%
   
-  # for q260- 1 = Male, 2 = Female
   # q28- how much do you agree: When a mother works for pay, the children suffer
   
   select(b_country, country_territory, q261, q260, q28p) %>%
   
   # before I added drop_an, when I did the summarize I got many NA values.
+  # for q260- 1 = Male, 2 = Female
   
   drop_na() %>%
+  mutate(Gender = ifelse(q260 == "1", "Male", "Female")) %>% 
   group_by(b_country,country_territory, q260) %>% 
+  
   
   # calculating the average score q28 got- ranges from 1 (strongly disagree) to
   # 4 (strongly agree), according to gender and country.
   
-  summarise(avg_q28 = sum(q28p)/n(), .groups = "drop") %>% 
+  summarise(avg_q28 = sum(q28p)/n(), .groups = "drop", Gender, country_territory) %>%  
   ggplot(mapping = aes(x = avg_q28,
                        y = fct_reorder(country_territory, avg_q28),
-                       fill = q260)) +
+                       fill = Gender)) +
   geom_col(position = "dodge") +
-  labs(title = "Agree or Disagree:
-       When a mother works for payment, her children suffer",
+  labs(title = "Agree or Disagree:\nWhen a mother works for payment, her children suffer",
        subtitle = "Opinions are similar between men and women, but highly varied between countries",
        fill = "Gender",
        x = "Average value raging from 1- strongly disagree, to 4- strongly agree",
        y = NULL) +
-  scale_fill_discrete(name = "Gender", labels = c("Male", "Female"))
+  scale_fill_manual(values = c("#FF9999", "#56B4E9")) 
 
 plot_q28
 ```
@@ -106,8 +109,7 @@ ggsave("plot_q28.png", plot_q28)
 ```
 
 ```{r}
-# plotting question 29: Q32- Being a housewife is just as fulfilling as working
-# for pay
+# plotting question 29: On the whole, men make better political leaders than women do
 
 plot_q29 <- WVS %>% 
   
@@ -123,24 +125,29 @@ plot_q29 <- WVS %>%
   # before I added drop_an, when I did the summarize I got many NA values.
   
   drop_na() %>% 
-  group_by(b_country,country_territory, q260) %>% 
   
-  # calculating the average score q28 got- ranges from 1 (strongly disagree) to
+  # for q260- 1 = Male, 2 = Female
+  # mutating a new row for Gender might have change the results???
+  
+  mutate(Gender = ifelse(q260 == 1, "Male", "Female")) %>% 
+  group_by(b_country,country_territory, q260, Gender) %>% 
+  
+  # calculating the average score - ranges from 1 (strongly disagree) to
   # 4 (strongly agree), according to gender and country.
   
-  summarise(avg_q29 = sum(q29p)/n(), .groups = "drop") %>% 
+  summarise(avg_q29 = sum(q29p)/n() - 2 , .groups = "drop", Gender, country_territory, q260) %>%    
   ggplot(mapping = aes(x = avg_q29,
                        y = fct_reorder(country_territory, avg_q29),
-                       fill = q260)) +
+                       fill = Gender)) +
   geom_col(position = "dodge") +
-  labs(title = "Agree or Disagree:\nBeing a housewife is just as fulfilling as working for pay",
-       subtitle = "Ironically men tend to agree with this statement more than women do",
+  labs(title = "Agree or Disagree:\nOn the whole, men make better political leaders than women do",
        fill = "Gender",
        x = "Average value raging from 1- strongly disagree, to 4- strongly agree",
        y = NULL) + 
-  scale_fill_discrete(name = "Gender", labels = c("Male", "Female"))
+  scale_fill_manual(values = c("#FF9999", "#56B4E9")) 
 
 plot_q29
+
 ```
 
 ```{r}
@@ -179,10 +186,10 @@ posterior_epred(fit_29, newdata = newobs) %>%
   rowwise() %>% 
   mutate(diff_male_minus_female = `1` - `2`) %>% 
   ggplot(aes(x = diff_male_minus_female)) +
-    geom_histogram(aes(y = after_stat(count/sum(count))),
+  geom_histogram(aes(y = after_stat(count/sum(count))),
                    bins = 100) +
   scale_y_continuous(labels = scales::percent_format()) +
-    theme_classic()
+  theme_classic()
 
 ```
 
@@ -230,7 +237,8 @@ joinData <- joinCountryData2Map(freedom,
 # defining color for the map:
 
 qpal <- colorNumeric("magma",
-                      joinData$freedom_to_make_life_choices_10, na.color = NA)
+                      joinData$freedom_to_make_life_choices_10, na.color = NA,
+                     domain = c(0:10))
 
 
 # the leaflet map:
@@ -282,8 +290,8 @@ max(happiness_score$score)
 ```{r happiness_interactive}
 # at first I used colorQuantile but it doesn't make sense for the data
 
-qpal <- colorNumeric(rev(viridis::viridis(10)),
-                      joinDataHapinnes$score, na.color = "gray")
+qpal <- colorNumeric("magma",
+                      joinDataHapinnes$score, na.color = NA, domain = (0:10))
 
 
 happiness_interactive <- leaflet(joinDataHapinnes, 
@@ -297,8 +305,277 @@ happiness_interactive <- leaflet(joinDataHapinnes,
       bringToFront = TRUE, sendToBack = TRUE)
     ) %>%
   addLegend(values = ~score,
-    opacity = 1, pal = qpal, title = htmltools::HTML("Happiness score from 1 lowest to 10 highest <br> 2019 World Happiness Report"))  
+    opacity = 1, pal = qpal, title = htmltools::HTML("Happiness Score<br>2019 World Happiness Report<h5>(from 1- lowest to 10- highest)</h5>"))  
 
 happiness_interactive
+```
+
+```{r hapinness_freedom}
+happiness_2019 %>% 
+  ggplot(aes(x = freedom_to_make_life_choices*10,
+             y = score)) +
+  geom_point() +
+  geom_smooth(method = "lm", 
+              formula = y ~ x) +
+  labs(title = "Happiness Score in Relation to Freedom to make Life Choices by Country",
+       subtitle = "There is a positive correlation between higher happiness score and more freedom  ",
+       x = "Freedom to Make Life Choices (from 1 to 10)",
+       y = "Hapinness Score (from 1 to 10)",
+       caption = "Source: Happiness Report 2019") +
+  theme_linedraw()
+```
+
+```{r q30}
+#Q30 A university education is more important for a boy than for a girl
+plot_q30 <- WVS %>% 
+  
+  # joining WVS data with the countries names instead of number
+  
+  inner_join(WVS_countries, by = "b_country") %>%
+  
+  # for q260- 1 = Male, 2 = Female
+  # q28- how much do you agree: When a mother works for pay, the children suffer
+  
+  select(b_country, country_territory, q261, q260, q30p) %>%
+  
+  # before I added drop_an, when I did the summarize I got many NA values.
+  
+  drop_na() %>% 
+  
+  # for q260- 1 = Male, 2 = Female
+  # mutating a new row for Gender might have change the results???
+  
+  mutate(Gender = ifelse(q260 == 1, "Male", "Female")) %>% 
+  group_by(b_country,country_territory, q260, Gender) %>% 
+  
+  # calculating the average score q28 got- ranges from 1 (strongly disagree) to
+  # 4 (strongly agree), according to gender and country.
+  
+  summarise(avg_q30 = sum(q30p)/n(), .groups = "drop", Gender, country_territory, q260) %>%     
+  ggplot(mapping = aes(x = avg_q30,
+                       y = fct_reorder(country_territory, avg_q30),
+                       fill = Gender)) +
+  geom_col(position = "dodge") +
+  labs(title = "Agree or Disagree:\nA university education is more important for a boy than for a girl",
+       fill = "Gender",
+       x = "Average value raging from 1- strongly disagree, to 4- strongly agree",
+       y = NULL) + 
+  scale_fill_manual(values = c("#FF9999", "#56B4E9"))
+
+plot_q30
+```
+
+```{r Q31}
+#Q31 On the whole, men make better business executives than women do
+
+plot_q31 <- WVS %>% 
+  
+  # joining WVS data with the countries names instead of number
+  
+  inner_join(WVS_countries, by = "b_country") %>%
+  
+  # for q260- 1 = Male, 2 = Female
+  # q28- how much do you agree: When a mother works for pay, the children suffer
+  
+  select(b_country, country_territory, q261, q260, q31p) %>%
+  
+  # before I added drop_an, when I did the summarize I got many NA values.
+  
+  drop_na() %>% 
+  
+  # for q260- 1 = Male, 2 = Female
+  # mutating a new row for Gender might have change the results???
+  
+  mutate(Gender = ifelse(q260 == 1, "Male", "Female")) %>% 
+  group_by(b_country,country_territory, q260, Gender) %>% 
+  
+  # calculating the average score q28 got- ranges from 1 (strongly disagree) to
+  # 4 (strongly agree), according to gender and country. value of between 1-2
+  # means disagree and value of 3-4 means agree, so I subtracted 2 from the
+  # average value to make the disagree negative and the agree positive
+  
+  summarise(avg_q31 = sum(q31p)/n() - 2.5, .groups = "drop", Gender, country_territory, q260) %>%     
+  ggplot(mapping = aes(x = avg_q31,
+                       y = fct_reorder(country_territory, avg_q31),
+                       fill = Gender)) +
+  geom_col(position = "dodge") +
+  labs(title = "Agree or Disagree:\nOn the whole, men make better business executives than women do",
+       fill = "Gender",
+       x = "Negative is Disagree - Positive is Agree",
+       y = NULL) + 
+  scale_fill_manual(values = c("#FF9999", "#56B4E9")) 
+  
+  # not sure how to explain what I did on the x axis Values of disagree ranging
+  # from 0 to -1 (the more negative the more the disagreement), Values of agree
+  # are ranging from 0 to 2 (the greater the agreement to higher the value)
+  
+
+plot_q31
+```
+
+```{r q31_different_approach}
+#Q31 On the whole, men make better business executives than women do
+
+WVS %>% 
+  
+  # joining WVS data with the countries names instead of number
+  
+  inner_join(WVS_countries, by = "b_country") %>%
+  
+  # for q260- 1 = Male, 2 = Female
+  # q28- how much do you agree: When a mother works for pay, the children suffer
+  
+  select(b_country, country_territory, q261, q260, q31p) %>%
+  
+  # before I added drop_an, when I did the summarize I got many NA values.
+  
+  drop_na() %>% 
+  
+  # for q260- 1 = Male, 2 = Female
+  # Adding a column with the values of gender
+  
+  mutate(Gender = ifelse(q260 == 1, "Male", "Female")) %>% 
+  group_by(Gender, q31p, country_territory) %>%
+  
+  # total agreement is the number of people who answered 1\2\3\4 for the
+  # question by gender and country
+  
+  summarise(total_agreement = n(), .groups = "drop") %>%   
+  
+  # 1 = strongly disagree, 2 = disagree, 3 = agree, 4 = strongly agree. 
+  # agreement simplifies the model and summarizes 1/2= Disagree, 3/4 = Agree
+  
+  mutate(agreement = ifelse(q31p == 1 | q31p == 2, "Disagree", "Agree")) %>% 
+  group_by(agreement, Gender, country_territory) %>% 
+  
+  # This new column counts the number of people who Agree/Disagree 
+  
+  mutate(agreement_gender_country = sum(total_agreement)) %>% 
+  ungroup() %>% 
+  group_by(country_territory) %>% 
+  
+  # Because there are different amount of people who answered this question in
+  # each country I calculated the percent agreement/ disagreement by country by
+  # gender.
+  
+  mutate(perc = agreement_gender_country/sum(agreement_gender_country)) %>%  
+  ungroup() %>% 
+  
+  #for ordering the data for visualization I made the column perc_neg with
+  #disagreement percent as negative
+  
+  mutate(perc_neg = ifelse(agreement == "Disagree", perc*(-1), perc))
+  ggplot(aes(y = fct_reorder(country_territory, perc_neg), x = perc, fill = Gender)) +
+  geom_col(position = "dodge") + 
+  facet_wrap(~ agreement) +
+  labs(title = "Agree or Disagree:\nMen are better business executives than women",
+       fill = "Gender",
+       subtitle = "In less progressive contries higher percent of women agree with the statement",
+       x = "Percent of People Who Agree/Disagree",
+       y = NULL) + 
+  scale_fill_manual(values = c("#FF9999", "#56B4E9")) +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+  theme_dark()
+```
+
+```{r Q32}
+# Q32 Being a housewife is just as fulfilling as working for pay
+
+WVS %>% 
+  
+  # joining WVS data with the countries names instead of number
+  
+  inner_join(WVS_countries, by = "b_country") %>%
+  
+  # for q260- 1 = Male, 2 = Female
+  # q28- how much do you agree: When a mother works for pay, the children suffer
+  
+  select(b_country, country_territory, q261, q260, q32p) %>%
+  
+  # before I added drop_an, when I did the summarize I got many NA values.
+  
+  drop_na() %>% 
+  
+  # for q260- 1 = Male, 2 = Female
+  # mutating a new row for Gender might have change the results???
+  
+  mutate(Gender = ifelse(q260 == 1, "Male", "Female")) %>% 
+  group_by(b_country,country_territory, q260, Gender) %>% 
+  
+  # calculating the average score q28 got- ranges from 1 (strongly disagree) to
+  # 4 (strongly agree), according to gender and country.
+  # a value of that is over 2 is agree and and below 2 is disagree 
+  
+  summarise(avg_q32 = sum(q32p)/n() - 2, .groups = "drop", Gender, country_territory, q260) %>%     
+  ggplot(mapping = aes(x = avg_q32,
+                       y = fct_reorder(country_territory, avg_q32),
+                       fill = Gender)) +
+  geom_col(position = "dodge") +
+  labs(title = "Agree or Disagree:\nBeing a housewife is just as fulfilling as working for pay",
+       fill = "Gender",
+       x = "Average value raging from 1- strongly disagree, to 4- strongly agree",
+       y = NULL) + 
+  scale_fill_manual(values = c("#FF9999", "#56B4E9")) 
+
+plot_q32
+```
+
+```{r}
+q <- "q31p"
+WVS %>% 
+  
+  # joining WVS data with the countries names instead of number
+  
+  inner_join(WVS_countries, by = "b_country") %>%
+           mutate(Gender = ifelse(q260 == 1, "Male", "Female")) %>%
+           select(country_territory, Gender, q) %>%
+           drop_na() %>% 
+           
+           group_by(Gender, q, country_territory) %>%
+           
+           # total agreement is the number of people who answered 1\2\3\4 for the
+           # question by gender and country
+           
+           summarise(total_agreement = n(), .groups = "drop") %>% 
+           # 1 = strongly disagree, 2 = disagree, 3 = agree, 4 = strongly agree. 
+           # agreement simplifies the model and summarizes 1/2= Disagree, 3/4 = Agree
+           
+           mutate(agreement = ifelse(q == 1 | q == 2, "Disagree", "Agree")) %>% 
+           group_by(agreement, Gender, country_territory) %>% 
+           
+           # This new column counts the number of people who Agree/Disagree 
+           
+           mutate(agreement_gender_country = sum(total_agreement)) %>% 
+           ungroup() %>% 
+           group_by(country_territory) %>% 
+           
+           # Because there are different amount of people who answered this question in
+           # each country I calculated the percent agreement/ disagreement by country by
+           # gender.
+           
+           mutate(perc = agreement_gender_country/sum(agreement_gender_country)) %>%  
+           ungroup() %>% 
+           
+           #for ordering the data for visualization I made the column perc_neg with
+           #disagreement percent as negative
+           
+           mutate(perc_neg = ifelse(agreement == "Disagree", perc*(-1), perc)) %>% 
+           ggplot(aes(y = fct_reorder(country_territory, perc_neg), x = perc, fill = Gender)) +
+           geom_col(position = "dodge") + 
+           facet_wrap(~ agreement) +
+           labs(title = "Agree or Disagree:\nMen are better business executives than women",
+                fill = "Gender",
+                subtitle = "In less progressive contries higher percent of women agree with the statement",
+                x = "Percent of People Who Agree/Disagree",
+                y = NULL) + 
+           scale_fill_manual(values = c("#FF9999", "#56B4E9")) +
+           scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+           theme_dark()
+           
+```
+
+```{r}
+
+
 ```
 

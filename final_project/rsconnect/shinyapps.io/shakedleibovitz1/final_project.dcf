@@ -5,8 +5,10 @@ account: shakedleibovitz1
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3820613
-bundleId: 4432723
+bundleId: 4489827
 url: https://shakedleibovitz1.shinyapps.io/final_project/
-when: 1617618409.77085
+when: 1618825378.46427
+lastSyncTime: 1618825378.46428
 asMultiple: FALSE
 asStatic: FALSE
+ignoredFiles: gather.html|gather.R|gather.Rmd|gather_files|raw_data
